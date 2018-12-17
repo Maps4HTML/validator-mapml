@@ -568,7 +568,7 @@ import io.mola.galimatias.GalimatiasParseException;
     }
 
     private String buildAccept() {
-        return "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8";
+        return "text/mapml;q=1.0,text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8";
     }
 
     /**

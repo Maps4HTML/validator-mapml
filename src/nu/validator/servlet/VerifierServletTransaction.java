@@ -1021,6 +1021,7 @@ class VerifierServletTransaction implements DocumentModeHandler, SchemaResolver 
                 || schemaUrls.startsWith("http://s.validator.nu/xhtml10/xhtml-transitional.rnc")
                 || schemaUrls.startsWith("http://s.validator.nu/xhtml10/xhtml-frameset.rnc")
                 || schemaUrls.startsWith("http://s.validator.nu/html5.rnc")
+                || schemaUrls.startsWith("http://s.validator.nu/html5/mapml.rnc")
                 || schemaUrls.startsWith("http://s.validator.nu/html5-all.rnc")
                 || schemaUrls.startsWith("http://s.validator.nu/html5-its.rnc")
                 || schemaUrls.startsWith("http://s.validator.nu/html5-rdfalite.rnc"));
@@ -1111,7 +1112,7 @@ class VerifierServletTransaction implements DocumentModeHandler, SchemaResolver 
             reader = wiretap;
             if (htmlParser != null) {
                 htmlParser.addCharacterHandler(sourceCode);
-                htmlParser.setMappingLangToXmlLang(true);
+                htmlParser.setMappingLangToXmlLang(false);
                 htmlParser.setErrorHandler(errorHandler.getExactErrorHandler());
                 htmlParser.setTreeBuilderErrorHandlerOverride(errorHandler);
                 errorHandler.setHtml(true);

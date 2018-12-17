@@ -795,7 +795,7 @@ public class LanguageDetectingChecker extends Checker {
     @Override
     public void startElement(String uri, String localName, String name,
             Attributes atts) throws SAXException {
-        if ("html".equals(localName)) {
+        if ("html".equals(localName) || "mapml".equals(localName)) {
             htmlStartTagLocator = new LocatorImpl(getDocumentLocator());
             for (int i = 0; i < atts.getLength(); i++) {
                 if ("lang".equals(atts.getLocalName(i))) {
