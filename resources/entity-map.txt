@@ -158,6 +158,7 @@ http://s.validator.nu/html5/form-datatypes.rnc	schema/html5/form-datatypes.rnc
 http://s.validator.nu/html5/html5core.rnc	schema/html5/html5core.rnc
 http://s.validator.nu/html5/html5exclusions.rnc	schema/html5/html5exclusions.rnc
 http://s.validator.nu/html5/html5full.rnc	schema/html5/html5full.rnc
+http://s.validator.nu/html5/mapml.rnc	schema/html5/mapml.rnc
 http://s.validator.nu/html5/media.rnc	schema/html5/media.rnc
 http://s.validator.nu/html5/meta.rnc	schema/html5/meta.rnc
 http://s.validator.nu/html5/phrase.rnc	schema/html5/phrase.rnc
