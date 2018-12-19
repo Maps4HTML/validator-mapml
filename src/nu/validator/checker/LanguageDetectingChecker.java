@@ -78,6 +78,8 @@ public class LanguageDetectingChecker extends Checker {
     private String declaredLangCode;
 
     private boolean htmlElementHasLang;
+    
+    private boolean isMapmlDoc = false;
 
     private String dirAttrValue;
 
@@ -603,8 +605,9 @@ public class LanguageDetectingChecker extends Checker {
     private void warnIfMissingLang() throws SAXException {
         if (!htmlElementHasLang) {
             String message = "Consider adding a \u201Clang\u201D"
-                    + " attribute to the \u201Chtml\u201D"
-                    + " start tag to declare the language"
+                    + " attribute to the \u201C"
+                    + (isMapmlDoc ? "mapml" : "html")
+                    + "\u201D start tag to declare the language"
                     + " of this document.";
             warn(message, htmlStartTagLocator);
         }
@@ -768,6 +771,7 @@ public class LanguageDetectingChecker extends Checker {
         elementContent = new StringBuilder();
         documentContent = new StringBuilder();
         htmlElementHasLang = false;
+        isMapmlDoc = false;
         htmlElementLangAttrValue = "";
         declaredLangCode = "";
         hasDir = false;
@@ -796,6 +800,7 @@ public class LanguageDetectingChecker extends Checker {
     public void startElement(String uri, String localName, String name,
             Attributes atts) throws SAXException {
         if ("html".equals(localName) || "mapml".equals(localName)) {
+            isMapmlDoc = ("mapml".equals(localName) && htmlStartTagLocator == null);
             htmlStartTagLocator = new LocatorImpl(getDocumentLocator());
             for (int i = 0; i < atts.getLength(); i++) {
                 if ("lang".equals(atts.getLocalName(i))) {

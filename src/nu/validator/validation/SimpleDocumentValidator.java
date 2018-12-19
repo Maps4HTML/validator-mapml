@@ -337,12 +337,11 @@ public class SimpleDocumentValidator {
         htmlParser.setContentSpacePolicy(XmlViolationPolicy.ALTER_INFOSET);
         htmlParser.setNamePolicy(XmlViolationPolicy.ALLOW);
         htmlParser.setXmlnsPolicy(XmlViolationPolicy.ALTER_INFOSET);
-        htmlParser.setMappingLangToXmlLang(true);
+        htmlParser.setMappingLangToXmlLang(false);
         htmlParser.setHeuristics(Heuristics.ALL);
         htmlParser.setContentHandler(validator.getContentHandler());
         htmlParser.setErrorHandler(docValidationErrHandler);
         htmlParser.setNamePolicy(XmlViolationPolicy.ALLOW);
-        htmlParser.setMappingLangToXmlLang(true);
         htmlParser.setFeature(
                 "http://xml.org/sax/features/unicode-normalization-checking",
                 true);
