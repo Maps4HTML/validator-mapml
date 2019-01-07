@@ -4,7 +4,7 @@
 	branch = validator-nu
 [submodule "htmlparser"]
 	path = htmlparser
-	url = https://github.com/prushforth/htmlparser
+	url = ../htmlparser
 	branch = validator-nu
 [submodule "jing-trang"]
 	path = jing-trang
