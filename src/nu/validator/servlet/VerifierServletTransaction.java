@@ -265,6 +265,7 @@ class VerifierServletTransaction implements DocumentModeHandler, SchemaResolver 
             "http://c.validator.nu/text-content/",
             "http://c.validator.nu/unchecked/",
             "http://c.validator.nu/usemap/", "http://c.validator.nu/obsolete/",
+            "http://c.validator.nu/extent/",
             "http://c.validator.nu/xml-pi/", "http://c.validator.nu/unsupported/",
             "http://c.validator.nu/microdata/",
             "http://c.validator.nu/langdetect/" };
@@ -526,6 +527,8 @@ class VerifierServletTransaction implements DocumentModeHandler, SchemaResolver 
                     CheckerSchema.TEXT_CONTENT_CHECKER);
             schemaMap.put("http://c.validator.nu/usemap/",
                     CheckerSchema.USEMAP_CHECKER);
+            schemaMap.put("http://c.validator.nu/extent/",
+                    CheckerSchema.EXTENT_CHECKER);
             schemaMap.put("http://n.validator.nu/checkers/usemap/",
                     CheckerSchema.USEMAP_CHECKER);
             schemaMap.put("http://c.validator.nu/unchecked/",

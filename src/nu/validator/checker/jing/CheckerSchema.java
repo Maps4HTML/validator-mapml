@@ -33,6 +33,7 @@ import nu.validator.checker.TextContentChecker;
 import nu.validator.checker.UncheckedSubtreeWarner;
 import nu.validator.checker.UnsupportedFeatureChecker;
 import nu.validator.checker.UsemapChecker;
+import nu.validator.checker.ExtentChecker;
 import nu.validator.checker.XmlPiChecker;
 import nu.validator.checker.schematronequiv.Assertions;
 import nu.validator.checker.table.TableChecker;
@@ -52,6 +53,8 @@ public class CheckerSchema implements Schema {
     public static final CheckerSchema UNCHECKED_SUBTREE_WARNER = new CheckerSchema(PropertyMap.EMPTY, UncheckedSubtreeWarner.class);
 
     public static final CheckerSchema USEMAP_CHECKER = new CheckerSchema(PropertyMap.EMPTY, UsemapChecker.class);
+
+    public static final CheckerSchema EXTENT_CHECKER = new CheckerSchema(PropertyMap.EMPTY, ExtentChecker.class);
 
     public static final CheckerSchema TABLE_CHECKER = new CheckerSchema(PropertyMap.EMPTY, TableChecker.class);
 
