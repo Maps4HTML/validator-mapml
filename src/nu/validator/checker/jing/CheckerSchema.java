@@ -41,6 +41,7 @@ import nu.validator.checker.table.TableChecker;
 import com.thaiopensource.util.PropertyMap;
 import com.thaiopensource.validate.Schema;
 import com.thaiopensource.validate.Validator;
+import nu.validator.checker.schematronequiv.MapmlAssertions;
 
 public class CheckerSchema implements Schema {
 
@@ -60,6 +61,8 @@ public class CheckerSchema implements Schema {
 
     public static final CheckerSchema ASSERTION_SCH = new CheckerSchema(PropertyMap.EMPTY, Assertions.class);
     
+    public static final CheckerSchema MAPML_ASSERTIONS = new CheckerSchema(PropertyMap.EMPTY, MapmlAssertions.class);
+
     public static final CheckerSchema CONFORMING_BUT_OBSOLETE_WARNER = new CheckerSchema(PropertyMap.EMPTY, ConformingButObsoleteWarner.class);
     
     public static final CheckerSchema XML_PI_CHECKER = new CheckerSchema(PropertyMap.EMPTY, XmlPiChecker.class);

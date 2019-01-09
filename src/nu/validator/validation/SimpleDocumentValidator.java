@@ -101,6 +101,8 @@ public class SimpleDocumentValidator {
 
     private boolean hasHtml5Schema;
 
+    private boolean hasMapmlSchema;
+
     private Schema assertionSchema;
 
     private Schema langdetectSchema;
@@ -253,7 +255,21 @@ public class SimpleDocumentValidator {
     public void setUpMainSchema(String schemaUrl, ErrorHandler errorHandler)
             throws SAXException, Exception, SchemaReadException {
         Schema schema = schemaByUrl(schemaUrl, errorHandler);
-        if (schemaUrl.contains("html5")) {
+        if (schemaUrl.contains("mapml")) {
+            try {
+                assertionSchema = CheckerSchema.MAPML_ASSERTIONS;
+            } catch (Exception e) {
+                throw new SchemaReadException(
+                        "Failed to retrieve secondary schema.");
+            }
+            try {
+                langdetectSchema = CheckerSchema.LANGUAGE_DETECTING_CHECKER;
+            } catch (Exception e) {
+                throw new SchemaReadException(
+                        "Failed to retrieve secondary schema.");
+            }
+            this.hasMapmlSchema = true;
+        } else if (schemaUrl.contains("html5")) {
             try {
                 assertionSchema = CheckerSchema.ASSERTION_SCH;
             } catch (Exception e) {
@@ -328,6 +344,11 @@ public class SimpleDocumentValidator {
                     new UsemapChecker(), jingPropertyMap));
             validator = new CombineValidator(validator, new CheckerValidator(
                     new XmlPiChecker(), jingPropertyMap));
+        } else if (this.hasMapmlSchema) {
+            Validator assertionValidator = assertionSchema.createValidator(jingPropertyMap);
+            validator = new CombineValidator(validator, assertionValidator);
+            Validator langdetectValidator = langdetectSchema.createValidator(jingPropertyMap);
+            validator = new CombineValidator(validator, langdetectValidator);
         }
 
         HtmlParser htmlParser = new HtmlParser();
