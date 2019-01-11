@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sch:schema xmlns:sch="http://purl.oclc.org/dsdl/schematron" queryBinding="xslt2"
+    xmlns:sqf="http://www.schematron-quickfix.com/validator/process" xmlns:xs="http://www.w3.org/2001/XMLSchema-datatypes" >
+    <sch:pattern >
+        <sch:rule context="input[@type='hidden'][@shard]">
+            <sch:assert test="exists(./@list)">A shard-type input must have a @list attribute</sch:assert>
+            <sch:let name="listid" value="./@list"></sch:let>
+            <sch:assert test="exists(//datalist[@id eq $listid])">A datalist must be associated to a shard-type input</sch:assert>
+            <sch:report test="exists(./@value)">A shard-type input must not have a @value</sch:report>
+        </sch:rule>
+        <sch:rule context="input[@shard]">
+            <sch:assert test=".[@type eq 'hidden']">A shard-type input must have @type="hidden"</sch:assert>
+        </sch:rule>
+        <sch:rule context="extent">
+            <sch:report test="(exists(@method) and not(exists(@action)))">An extent with a method attribute must have an action attribute</sch:report>
+        </sch:rule>
+    </sch:pattern>
+    <sch:pattern>
+        <sch:rule context="extent[@action]">
+            <sch:assert test="input and (count(link[@rel='query']) eq 1 or not(exists(link[@rel='query'])))"> Extent Content model: If the action attribute exists: A set of multiple input and zero or one link element with its rel attribute in the "query" state.</sch:assert>
+        </sch:rule>
+        <sch:rule context="extent[not(@action)]">
+            <sch:assert test="input and link[@rel=('tile','image','features')] and count(link[@rel eq 'query']) &lt;= 1"> Extent Content model:  If no action attribute exists: A set of multiple input and one or more link elements with their rel attribute in either the "tile", "image" or "features" state, and zero or one link element with its rel attribute in the "query" state.</sch:assert>     
+        </sch:rule>
+    </sch:pattern>
+    <sch:pattern>
+        <sch:rule context="input[@name = preceding-sibling::input/@name]">
+            <sch:assert test="false()">Duplicate input/@name detected</sch:assert>
+        </sch:rule>
+        <sch:rule context="input[@type eq 'location' or @type eq 'zoom'][@min][@max][xs:decimal(@min) &gt; xs:decimal(@max)]">
+            <sch:assert test="false()">@min &gt; @max detected</sch:assert>
+        </sch:rule>
+        <sch:rule context="link[@projection]">
+            <!-- this rule doesn't work. don't know why. <sch:assert test="./@rel eq 'alternate'">For alternate projection links, @rel must equal 'alternate'</sch:assert>-->
+            <sch:assert test="local-name(parent::node()) eq 'head'">Alternate projection links can only be in the head element</sch:assert>
+        </sch:rule>
+        </sch:rule>
+    </sch:pattern>
+    <sch:pattern>
+        <sch:rule context="label">
+            <sch:assert test="exists(./@for)">A label must have a @for attribute</sch:assert>
+            <sch:let name="forid" value="./@for"></sch:let>
+            <sch:assert test="exists(//*[@id eq $forid])">A label must be associated to another element by label@for == element@id</sch:assert>
+        </sch:rule>
+    </sch:pattern>
+    <sch:pattern>
+        <sch:rule context="select[@id]">
+            <sch:let name="forid" value="./@id"></sch:let>
+            <sch:assert test="count(//label[@for eq $forid]) eq 1">There must be only one label per labelled (select) element. Duplicated label for id="<sch:value-of select="$forid"/>".</sch:assert>
+        </sch:rule>
+    </sch:pattern>
+</sch:schema>
