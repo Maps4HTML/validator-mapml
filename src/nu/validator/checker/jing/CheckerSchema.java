@@ -55,13 +55,11 @@ public class CheckerSchema implements Schema {
 
     public static final CheckerSchema USEMAP_CHECKER = new CheckerSchema(PropertyMap.EMPTY, UsemapChecker.class);
 
-    public static final CheckerSchema EXTENT_CHECKER = new CheckerSchema(PropertyMap.EMPTY, ExtentChecker.class);
-
     public static final CheckerSchema TABLE_CHECKER = new CheckerSchema(PropertyMap.EMPTY, TableChecker.class);
 
     public static final CheckerSchema ASSERTION_SCH = new CheckerSchema(PropertyMap.EMPTY, Assertions.class);
     
-    public static final CheckerSchema MAPML_ASSERTIONS = new CheckerSchema(PropertyMap.EMPTY, MapmlAssertions.class);
+    public static final CheckerSchema MAPML_CHECKER = new CheckerSchema(PropertyMap.EMPTY, MapmlAssertions.class);
 
     public static final CheckerSchema CONFORMING_BUT_OBSOLETE_WARNER = new CheckerSchema(PropertyMap.EMPTY, ConformingButObsoleteWarner.class);
     

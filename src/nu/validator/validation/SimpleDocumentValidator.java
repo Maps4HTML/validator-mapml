@@ -257,7 +257,7 @@ public class SimpleDocumentValidator {
         Schema schema = schemaByUrl(schemaUrl, errorHandler);
         if (schemaUrl.contains("mapml")) {
             try {
-                assertionSchema = CheckerSchema.MAPML_ASSERTIONS;
+                assertionSchema = CheckerSchema.MAPML_CHECKER;
             } catch (Exception e) {
                 throw new SchemaReadException(
                         "Failed to retrieve secondary schema.");

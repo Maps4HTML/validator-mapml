@@ -270,6 +270,9 @@ class VerifierServletTransaction implements DocumentModeHandler, SchemaResolver 
             "http://c.validator.nu/microdata/",
             "http://c.validator.nu/langdetect/" };
 
+    private static final String[] ALL_MAPML_CHECKERS = {
+            "http://c.validator.nu/mapml.sch"};
+
     private static final String[] ALL_CHECKERS_HTML4 = {
             "http://c.validator.nu/table/", "http://c.validator.nu/nfc/",
             "http://c.validator.nu/unchecked/", "http://c.validator.nu/usemap/" };
@@ -527,8 +530,8 @@ class VerifierServletTransaction implements DocumentModeHandler, SchemaResolver 
                     CheckerSchema.TEXT_CONTENT_CHECKER);
             schemaMap.put("http://c.validator.nu/usemap/",
                     CheckerSchema.USEMAP_CHECKER);
-            schemaMap.put("http://c.validator.nu/extent/",
-                    CheckerSchema.EXTENT_CHECKER);
+            schemaMap.put("http://c.validator.nu/mapml.sch",
+                    CheckerSchema.MAPML_CHECKER);
             schemaMap.put("http://n.validator.nu/checkers/usemap/",
                     CheckerSchema.USEMAP_CHECKER);
             schemaMap.put("http://c.validator.nu/unchecked/",
@@ -689,6 +692,8 @@ class VerifierServletTransaction implements DocumentModeHandler, SchemaResolver 
         } else if ("http://c.validator.nu/base/".equals(url)) {
             return true;
         } else if ("http://c.validator.nu/rdfalite/".equals(url)) {
+            return true;
+        } else if ("http://c.validator.nu/mapml.sch".equals(url)) {
             return true;
         }
         for (String checker : ALL_CHECKERS) {

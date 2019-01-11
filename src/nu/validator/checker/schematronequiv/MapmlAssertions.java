@@ -22,15 +22,21 @@
 
 package nu.validator.checker.schematronequiv;
 
+import java.io.ByteArrayInputStream;
 import java.io.StringReader;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import javax.servlet.http.HttpServletRequest;
+import nu.validator.checker.AttributeUtil;
 
 import nu.validator.checker.Checker;
 import nu.validator.checker.LocatorImpl;
@@ -107,9 +113,39 @@ public class MapmlAssertions extends Checker {
         return "";
     }
 
+    private static final Map<String, String[]> COORDINATE_SYSTEM_AXES = new HashMap<>();
+
+    static {
+        COORDINATE_SYSTEM_AXES.put("tilematrix", 
+                new String[] {"row", "column"});
+        COORDINATE_SYSTEM_AXES.put("tile", 
+                new String[] {"i", "j"});
+        COORDINATE_SYSTEM_AXES.put("tcrs", 
+                new String[] {"x", "y"});
+        COORDINATE_SYSTEM_AXES.put("gcrs", 
+                new String[] {"latitude", "longitude"});
+        COORDINATE_SYSTEM_AXES.put("map", 
+                new String[] {"i", "j"});
+        COORDINATE_SYSTEM_AXES.put("pcrs", 
+                new String[] {"easting", "northing"});
+    }
+
+    
     private static final Map<String, String[]> INPUT_ATTRIBUTES = new HashMap<>();
 
     static {
+        INPUT_ATTRIBUTES.put("min", 
+                new String[] {"zoom", "location", "width", "height"});
+        INPUT_ATTRIBUTES.put("max", 
+                new String[] {"zoom", "location", "width", "height"});
+        INPUT_ATTRIBUTES.put("units",
+                new String[] {"location"});
+        INPUT_ATTRIBUTES.put("axis",
+                new String[] {"location"});
+        INPUT_ATTRIBUTES.put("position",
+                new String[] {"location"});
+        INPUT_ATTRIBUTES.put("shard",
+                new String[] {"hidden"});
         INPUT_ATTRIBUTES.put("autocomplete",
                 new String[] { "hidden", "text", "search", "url", "tel", "email",
                         "password", "date", "month", "week", "time",
@@ -362,6 +398,10 @@ public class MapmlAssertions extends Checker {
         private boolean emptyValueOptionFound = false;
 
         private boolean isCollectingCharacters = false;
+        
+        private boolean zoomFound = false;
+        
+        private final Map<String, Set<String>> axesFound = new HashMap<>();
 
         /**
          * @param ancestorMask
@@ -376,6 +416,13 @@ public class MapmlAssertions extends Checker {
             this.textContent = new StringBuilder();
         }
 
+        public boolean isZoomFound() {
+          return zoomFound;
+        }
+
+        public void setZoomFound() {
+          this.zoomFound = true;
+        }
         /**
          * Returns the ancestorMask.
          *
@@ -450,7 +497,7 @@ public class MapmlAssertions extends Checker {
         public void setTrackDescendants() {
             this.trackDescendants = true;
         }
-
+        
         /**
          * Returns the role.
          *
@@ -572,6 +619,20 @@ public class MapmlAssertions extends Checker {
          */
         public void setHeadingFound() {
             this.headingFound = true;
+        }
+        
+        public Map<String, Set<String>> getAxesFound() {
+            return this.axesFound;
+        }
+        
+        public void setFoundAxis(String cs, String axis) {
+          if (this.axesFound.containsKey(cs)) {
+              this.axesFound.get(cs).add(axis);
+          } else {
+              Set<String> axes = new HashSet<String>();
+              axes.add(axis);
+              this.axesFound.put(cs, axes);
+          }
         }
 
         /**
@@ -779,52 +840,23 @@ public class MapmlAssertions extends Checker {
 
     private Set<String> listIds = new HashSet<>();
 
-    private LinkedHashSet<IdrefLocator> ariaReferences = new LinkedHashSet<>();
-
-    private Set<String> allIds = new HashSet<>();
-
-    private int currentFigurePtr;
-
-    private int currentHeadingPtr;
-
-    private int currentSectioningElementPtr;
-
-    private boolean hasVisibleMain;
-
-    private boolean hasMetaCharset;
-
-    private boolean hasMetaDescription;
-
-    private boolean hasContentTypePragma;
-
-    private boolean hasAutofocus;
-
-    private boolean hasTopLevelH1;
-
-    private int numberOfTemplatesDeep = 0;
-
-    private Set<Locator> secondLevelH1s = new HashSet<>();
+    private Set<Locator> selfStyles = new HashSet<>();
 
     private Map<Locator, Map<String, String>> siblingSources = new ConcurrentHashMap<>();
-
-// keep for now
-//    private final void errObsoleteAttribute(String attribute, String element,
-//            String suggestion) throws SAXException {
-//        err("The \u201C" + attribute + "\u201D attribute on the \u201C"
-//                + element + "\u201D element is obsolete." + suggestion);
-//    }
-//
-//    private final void warnObsoleteAttribute(String attribute, String element,
-//            String suggestion) throws SAXException {
-//        warn("The \u201C" + attribute + "\u201D attribute on the \u201C"
-//                + element + "\u201D element is obsolete." + suggestion);
-//    }
 
     /**
      * @see nu.validator.checker.Checker#endDocument()
      */
     @Override
     public void endDocument() throws SAXException {
+        if (selfStyles.size() > 1) {
+          for (Locator selfStyleLocator : selfStyles) {
+                err("A document may contain only on \u201Clink\u201D element"
+                    + " with a \u201Crel\u201D attribute value of "
+                    + " \u201Cself style\u201D or \u201Cstyle self\u201D.",
+                        selfStyleLocator);
+          }
+        }
         // label for
         for (IdrefLocator idrefLocator : formControlReferences) {
             if (!formControlIds.contains(idrefLocator.getIdref())) {
@@ -996,6 +1028,39 @@ public class MapmlAssertions extends Checker {
                         }
                     }
                 }
+            } else if ("extent".equals(localName)) {
+                // see if there was an input[@zoom] found
+                if (!node.isZoomFound()) {
+                    err("An \u201Cextent\u201D element must have a child"
+                            + " \u201Cinput\u201D element with \u201Ctype\u201D"
+                            + " attribute value of \u201Czoom\u201D.",
+                            node.locator());
+                }
+                if (node.axesFound.isEmpty()) {
+                    err("An \u201Cextent\u201D element must have child"
+                            + " \u201Cinput\u201D elements with \u201Ctype\u201D"
+                            + " attribute value of \u201Clocation\u201D.",
+                            node.locator());
+                } else { 
+                    // make sure axes are paired at least once to represent 
+                    // coordinate pairs
+                    for (String cs : COORDINATE_SYSTEM_AXES.keySet()) {
+                        if (node.axesFound.containsKey(cs)) {
+                            if (!node.axesFound.get(cs).isEmpty()) {
+                                if (!node.axesFound.get(cs).containsAll(
+                                    Arrays.asList(COORDINATE_SYSTEM_AXES.get(cs)))) {
+                                    err("An \u201Cextent\u201D element must have"
+                                        + " complementary pairs of \u201Cinput"
+                                        + "\u201D elements whose \u201Ctype"
+                                        + "\u201D attribute equals \u201Clocation"
+                                        + "\u201D and which share a \u201Cunits"
+                                        + "\u201D attribute value (coordinate system).",
+                                        node.locator());
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
         if ((locator = openActiveDescendants.remove(node)) != null) {
@@ -1015,10 +1080,6 @@ public class MapmlAssertions extends Checker {
         request = getRequest();
         stack = new StackNode[32];
         stack[0] = null;
-        hasVisibleMain = false;
-        hasMetaCharset = false;
-        hasMetaDescription = false;
-        hasContentTypePragma = false;
     }
 
     @Override
@@ -1059,7 +1120,7 @@ public class MapmlAssertions extends Checker {
             String lang = null;
             String id = null;
             String list = null;
-
+            
             // Exclusions
             Integer maskAsObject;
             int mask = 0;
@@ -1086,77 +1147,74 @@ public class MapmlAssertions extends Checker {
             if ("input" == localName && ((ancestorMask & EXTENT_MASK) == 0)) {
                 err("The \u201Cinput\u201D element must have a \u201Cextent\u201D ancestor.");
             }            
-            // TODO refactor to validate input attributes (primarily) 
-//            int len = atts.getLength();
-//            for (int i = 0; i < len; i++) {
-//                String attUri = atts.getURI(i);
-//                if (attUri.length() == 0) {
-//                    String attLocal = atts.getLocalName(i);
-//                    if ("style" == attLocal) {
-//                        String styleContents = atts.getValue(i);
-//                        ApplContext ac = new ApplContext("en");
-//                        ac.setCssVersionAndProfile("css3svg");
-//                        ac.setMedium("all");
-//                        ac.setSuggestPropertyName(false);
-//                        ac.setTreatVendorExtensionsAsWarnings(true);
-//                        ac.setTreatCssHacksAsWarnings(true);
-//                        ac.setWarningLevel(-1);
-//                        ac.setFakeURL("file://localhost/StyleAttribute");
-//                        StyleSheetParser styleSheetParser = //
-//                                new StyleSheetParser();
-//                        styleSheetParser.parseStyleAttribute(ac,
-//                                new ByteArrayInputStream(
-//                                        styleContents.getBytes()),
-//                                "", ac.getFakeURL(),
-//                                getDocumentLocator().getLineNumber());
-//                        styleSheetParser.getStyleSheet().findConflicts(ac);
-//                        Errors errors = //
-//                                styleSheetParser.getStyleSheet().getErrors();
-//                        if (errors.getErrorCount() > 0) {
-//                            incrementUseCounter("style-attribute-errors-found");
-//                        }
-//                        for (int j = 0; j < errors.getErrorCount(); j++) {
-//                            String message = "";
-//                            String cssProperty = "";
-//                            String cssMessage = "";
-//                            CssError error = errors.getErrorAt(j);
-//                            Throwable ex = error.getException();
-//                            if (ex instanceof CssParseException) {
-//                                CssParseException cpe = (CssParseException) ex;
-//                                if ("generator.unrecognize" //
-//                                        .equals(cpe.getErrorType())) {
-//                                    cssMessage = "Parse Error";
-//                                }
-//                                if (cpe.getProperty() != null) {
-//                                    cssProperty = String.format(
-//                                            "\u201c%s\u201D: ",
-//                                            cpe.getProperty());
-//                                }
-//                                if (cpe.getMessage() != null) {
-//                                    cssMessage = cpe.getMessage();
-//                                }
-//                                if (!"".equals(cssMessage)) {
-//                                    message = cssProperty + cssMessage + ".";
-//                                }
-//                            } else {
-//                                message = ex.getMessage();
-//                            }
-//                            if (!"".equals(message)) {
-//                                err("CSS: " + message);
-//                            }
-//                        }
-//                    } else if ("tabindex" == attLocal) {
-//                        tabindex = true;
-//                    } else if ("href" == attLocal) {
-//                        href = true;
-//                    } else if ("controls" == attLocal) {
-//                        controls = true;
-//                    } else if ("type" == attLocal && "param" != localName
-//                            && "ol" != localName && "ul" != localName
-//                            && "li" != localName) {
-//                        if ("input" == localName) {
-//                            inputTypeVal = atts.getValue(i).toLowerCase();
-//                        }
+            int len = atts.getLength();
+            for (int i = 0; i < len; i++) {
+                String attUri = atts.getURI(i);
+                if (attUri.length() == 0) {
+                    String attLocal = atts.getLocalName(i);
+                    if ("style" == attLocal) {
+                        String styleContents = atts.getValue(i);
+                        ApplContext ac = new ApplContext("en");
+                        ac.setCssVersionAndProfile("css3svg");
+                        ac.setMedium("all");
+                        ac.setSuggestPropertyName(false);
+                        ac.setTreatVendorExtensionsAsWarnings(true);
+                        ac.setTreatCssHacksAsWarnings(true);
+                        ac.setWarningLevel(-1);
+                        ac.setFakeURL("file://localhost/StyleAttribute");
+                        StyleSheetParser styleSheetParser = //
+                                new StyleSheetParser();
+                        styleSheetParser.parseStyleAttribute(ac,
+                                new ByteArrayInputStream(
+                                        styleContents.getBytes()),
+                                "", ac.getFakeURL(),
+                                getDocumentLocator().getLineNumber());
+                        styleSheetParser.getStyleSheet().findConflicts(ac);
+                        Errors errors = //
+                                styleSheetParser.getStyleSheet().getErrors();
+                        if (errors.getErrorCount() > 0) {
+                            incrementUseCounter("style-attribute-errors-found");
+                        }
+                        for (int j = 0; j < errors.getErrorCount(); j++) {
+                            String message = "";
+                            String cssProperty = "";
+                            String cssMessage = "";
+                            CssError error = errors.getErrorAt(j);
+                            Throwable ex = error.getException();
+                            if (ex instanceof CssParseException) {
+                                CssParseException cpe = (CssParseException) ex;
+                                if ("generator.unrecognize" //
+                                        .equals(cpe.getErrorType())) {
+                                    cssMessage = "Parse Error";
+                                }
+                                if (cpe.getProperty() != null) {
+                                    cssProperty = String.format(
+                                            "\u201c%s\u201D: ",
+                                            cpe.getProperty());
+                                }
+                                if (cpe.getMessage() != null) {
+                                    cssMessage = cpe.getMessage();
+                                }
+                                if (!"".equals(cssMessage)) {
+                                    message = cssProperty + cssMessage + ".";
+                                }
+                            } else {
+                                message = ex.getMessage();
+                            }
+                            if (!"".equals(message)) {
+                                err("CSS: " + message);
+                            }
+                        }
+                    } else if ("tabindex" == attLocal) {
+                        tabindex = true;
+                    } else if ("href" == attLocal) {
+                        href = true;
+                    } else if ("controls" == attLocal) {
+                        controls = true;
+                    } else if ("type" == attLocal) {
+                        if ("input" == localName) {
+                            inputTypeVal = atts.getValue(i).toLowerCase();
+                        }
 //                        String attValue = atts.getValue(i);
 //                        if (AttributeUtil.lowerCaseLiteralEqualsIgnoreAsciiCaseString(
 //                                "hidden", attValue)) {
@@ -1165,154 +1223,148 @@ public class MapmlAssertions extends Checker {
 //                                "toolbar", attValue)) {
 //                            toolbar = true;
 //                        }
-//
-//                    } else if ("list" == attLocal) {
-//                        list = atts.getValue(i);
-//                    } else if ("lang" == attLocal) {
-//                        lang = atts.getValue(i);
-//                    } else if ("id" == attLocal) {
-//                        id = atts.getValue(i);
-//                    } else if ("for" == attLocal && "label" == localName) {
-//                        forAttr = atts.getValue(i);
-////                        ancestorMask |= LABEL_FOR_MASK;
-//                    } else if ("selected" == attLocal) {
-//                        selected = true;
-//                    } else if ("itemid" == attLocal) {
-//                        itemid = true;
-//                    } else if ("itemref" == attLocal) {
-//                        itemref = true;
-//                    } else if ("itemscope" == attLocal) {
-//                        itemscope = true;
-//                    } else if ("itemtype" == attLocal) {
-//                        itemtype = true;
-//                    } else if (INPUT_ATTRIBUTES.containsKey(attLocal)
-//                            && "input" == localName) {
-//                        String[] allowedTypes = INPUT_ATTRIBUTES.get(attLocal);
-//                        Arrays.sort(allowedTypes);
-//                        inputTypeVal = inputTypeVal == null ? "text"
-//                                : inputTypeVal;
-//                        if (Arrays.binarySearch(allowedTypes,
-//                                inputTypeVal) < 0) {
-//                            err("Attribute \u201c" + attLocal
-//                                    + "\u201d is only allowed when the input"
-//                                    + " type is " + renderTypeList(allowedTypes)
-//                                    + ".");
-//                        }
-//                    } else if (ATTRIBUTES_WITH_IMPLICIT_STATE_OR_PROPERTY.contains(
-//                            attLocal)) {
-//                        String stateOrProperty = "aria-" + attLocal;
-//                        if (atts.getIndex("", stateOrProperty) > -1
-//                                && "true".equals(
-//                                        atts.getValue("", stateOrProperty))) {
-//                            warn("Attribute \u201C" + stateOrProperty
-//                                    + "\u201D is unnecessary for elements that"
-//                                    + " have attribute \u201C" + attLocal
-//                                    + "\u201D.");
-//                        }
-//                    }
-//                }
-//
-//                if (atts.getType(i) == "ID" || "id" == atts.getLocalName(i)) {
-//                    String attVal = atts.getValue(i);
-//                    if (attVal.length() != 0) {
-//                        ids.add(attVal);
-//                    }
-//                }
-//            }
-//            // TODO refactor link element assertions to suit MapML context
-//            if ("link" == localName) {
-//                boolean hasRel = false;
-//                List<String> relList = new ArrayList<>();
-//                if (atts.getIndex("", "rel") > -1) {
-//                    hasRel = true;
-//                    Collections.addAll(relList, //
-//                            atts.getValue("", "rel") //
-//                            .toLowerCase().split("\\s+"));
-//                }
-//                if (atts.getIndex("", "integrity") > -1
-//                        && ((relList != null && !relList.contains("stylesheet")
-//                                || !hasRel))) {
-//                    err("A \u201Clink\u201D element with an"
-//                            + " \u201Cintegrity\u201D attribute must have a"
-//                            + " \u201Crel\u201D attribute that contains the"
-//                            + " value \u201Cstylesheet\u201D.");
-//                }
-//                if (atts.getIndex("", "sizes") > -1
-//                        && ((relList != null && !relList.contains("icon")
-//                                && !relList.contains("apple-touch-icon"))
-//                                && !relList.contains("apple-touch-icon-precomposed")
-//                                || !hasRel)) {
-//                    err("A \u201Clink\u201D element with a"
-//                            + " \u201Csizes\u201D attribute must have a"
-//                            + " \u201Crel\u201D attribute that contains the"
-//                            + " value \u201Cicon\u201D or the value"
-//                            + " \u201Capple-touch-icon\u201D or the value"
-//                            + " \u201Capple-touch-icon-precomposed\u201D.");
-//                }
-//                if (atts.getIndex("", "color") > -1 //
-//                        && (!hasRel || (relList != null
-//                                && !relList.contains("mask-icon")))) {
-//                    err("A \u201Clink\u201D element with a"
-//                            + " \u201Ccolor\u201D attribute must have a"
-//                            + " \u201Crel\u201D attribute that contains"
-//                            + " the value \u201Cmask-icon\u201D.");
-//                }
-//                if (atts.getIndex("", "scope") > -1 //
-//                        && ((relList != null
-//                                && !relList.contains("serviceworker"))
-//                                || !hasRel)) {
-//                    err("A \u201Clink\u201D element with a"
-//                            + " \u201Cscope\u201D attribute must have a"
-//                            + " \u201Crel\u201D attribute that contains the"
-//                            + " value \u201Cserviceworker\u201D.");
-//                }
-//                if (atts.getIndex("", "updateviacache") > -1 //
-//                        && ((relList != null
-//                                && !relList.contains("serviceworker"))
-//                                || !hasRel)) {
-//                    err("A \u201Clink\u201D element with an"
-//                            + " \u201Cupdateviacache\u201D attribute must have a"
-//                            + " \u201Crel\u201D attribute that contains the"
-//                            + " value \u201Cserviceworker\u201D.");
-//                }
-//                if (atts.getIndex("", "workertype") > -1 //
-//                        && ((relList != null
-//                                && !relList.contains("serviceworker"))
-//                                || !hasRel)) {
-//                    err("A \u201Clink\u201D element with a"
-//                            + " \u201Cworkertype\u201D attribute must have a"
-//                            + " \u201Crel\u201D attribute that contains the"
-//                            + " value \u201Cserviceworker\u201D.");
-//                }
-//                if ((ancestorMask & BODY_MASK) != 0
-//                        && (relList != null
-//                                && !(relList.contains("dns-prefetch")
-//                                        || relList.contains("modulepreload")
-//                                        || relList.contains("pingback")
-//                                        || relList.contains("preconnect")
-//                                        || relList.contains("prefetch")
-//                                        || relList.contains("preload")
-//                                        || relList.contains("prerender")
-//                                        || relList.contains("stylesheet")))
-//                        && atts.getIndex("", "itemprop") < 0
-//                        && atts.getIndex("", "property") < 0) {
-//                    err("A \u201Clink\u201D element must not appear"
-//                            + " as a descendant of a \u201Cbody\u201D element"
-//                            + " unless the \u201Clink\u201D element has an"
-//                            + " \u201Citemprop\u201D attribute or has a"
-//                            + " \u201Crel\u201D attribute whose value contains"
-//                            + " \u201Cdns-prefetch\u201D,"
-//                            + " \u201Cmodulepreload\u201D,"
-//                            + " \u201Cpingback\u201D,"
-//                            + " \u201Cpreconnect\u201D,"
-//                            + " \u201Cprefetch\u201D,"
-//                            + " \u201Cpreload\u201D,"
-//                            + " \u201Cprerender\u201D, or"
-//                            + " \u201Cstylesheet\u201D.");
-//                }
-//            }
-        }
-        if ("http://www.w3.org/1999/xhtml" == uri) {
+
+                    } else if ("list" == attLocal) {
+                        list = atts.getValue(i);
+                    } else if ("lang" == attLocal) {
+                        lang = atts.getValue(i);
+                    } else if ("id" == attLocal) {
+                        id = atts.getValue(i);
+                    } else if ("for" == attLocal && "label" == localName) {
+                        forAttr = atts.getValue(i);
+//                        ancestorMask |= LABEL_FOR_MASK;
+                    } else if ("selected" == attLocal) {
+                        selected = true;
+                    } else if ("itemid" == attLocal) {
+                        itemid = true;
+                    } else if ("itemref" == attLocal) {
+                        itemref = true;
+                    } else if ("itemscope" == attLocal) {
+                        itemscope = true;
+                    } else if ("itemtype" == attLocal) {
+                        itemtype = true;
+                    } else if (INPUT_ATTRIBUTES.containsKey(attLocal)
+                            && "input" == localName) {
+                        String[] allowedTypes = INPUT_ATTRIBUTES.get(attLocal);
+                        Arrays.sort(allowedTypes);
+                        inputTypeVal = inputTypeVal == null ? "text"
+                                : inputTypeVal;
+                        if (Arrays.binarySearch(allowedTypes,
+                                inputTypeVal) < 0) {
+                            err("Attribute \u201c" + attLocal
+                                    + "\u201d is only allowed when the input"
+                                    + " type is " + renderTypeList(allowedTypes)
+                                    + ".");
+                        }
+                        if ("zoom".equals(inputTypeVal)) {
+                            parent.setZoomFound();
+                        } 
+                    } else if (ATTRIBUTES_WITH_IMPLICIT_STATE_OR_PROPERTY.contains(
+                            attLocal)) {
+                        String stateOrProperty = "aria-" + attLocal;
+                        if (atts.getIndex("", stateOrProperty) > -1
+                                && "true".equals(
+                                        atts.getValue("", stateOrProperty))) {
+                            warn("Attribute \u201C" + stateOrProperty
+                                    + "\u201D is unnecessary for elements that"
+                                    + " have attribute \u201C" + attLocal
+                                    + "\u201D.");
+                        }
+                    }
+                }
+
+                if (atts.getType(i) == "ID" || "id" == atts.getLocalName(i)) {
+                    String attVal = atts.getValue(i);
+                    if (attVal.length() != 0) {
+                        ids.add(attVal);
+                    }
+                }
+            }
+            if ("input".equals(localName)) {
+                inputTypeVal = inputTypeVal == null ? "text" : inputTypeVal;
+                if ("location".equals(inputTypeVal)) {
+                    // units, axis, position, min, max
+                    String unitsValue = atts.getIndex("", "units") > -1 ? 
+                            atts.getValue(atts.getIndex("", "units")) : "tcrs";
+                    String axisValue = atts.getIndex("", "axis") > -1 ? 
+                            atts.getValue(atts.getIndex("", "axis")) : null;
+                    if (axisValue != null) {
+                        parent.setFoundAxis(unitsValue, axisValue);
+                        String[] allowedAxes = COORDINATE_SYSTEM_AXES.get(unitsValue);
+                        Arrays.sort(allowedAxes);
+                        if (Arrays.binarySearch(allowedAxes,axisValue) < 0) {
+                            err("\u201Caxis\u201D attribute value \u201c" + axisValue
+                                + "\u201d is not allowed when the input"
+                                + " \u201Cunits\u201D value is \u201C" + unitsValue 
+                                + "\u201d. Value must be one of: " 
+                                + renderTypeList(allowedAxes) + ".");
+                        }
+                    } else {
+                        err("The \u201Cinput\u201D element with attribute"
+                            + " \u201Ctype\u201D equals \u201Clocation\u201D" 
+                            + " must have an \u201Caxis\u201D attribute.");
+                    }
+                    if ("tilematrix".equals(unitsValue)) {
+                        if (atts.getIndex("", "rel") > -1
+                            && !atts.getValue(atts.getIndex("","rel")).equals("map")) {
+                            err("The \u201Cinput\u201D element attribute"
+                                + " \u201Crel\u201D must equal \u201Cmap\u201D," 
+                                + " or not exist at all.");
+                        }
+                    }
+                }              
+            }
+            if ("link" == localName) {
+                boolean hasRel = false;
+                List<String> relList = new ArrayList<>();
+                if (atts.getIndex("", "rel") > -1) {
+                    hasRel = true;
+                    Collections.addAll(relList, //
+                            atts.getValue("", "rel") //
+                            .toLowerCase().split("\\s+"));
+                }
+                if (hasRel && 
+                    relList.contains("self") && relList.contains("style")) {
+                    selfStyles.add(new LocatorImpl(getDocumentLocator()));
+                }
+                if (atts.getIndex("", "tref") >= 0) {
+                    if (parentName != null && !"extent".equals(parentName)) {
+                        err("The \u201Ctref\u201D attribute must only occur"
+                                + " on a \u201Clink\u201D element"
+                                + " within an \u201Cextent\u201D element.");
+                    }
+                    if (atts.getIndex("", "href") >= 0) {
+                        err("A \u201Clink\u201D element may have a \u201Ctref\u201D attribute or"
+                                + " an \u201Chref\u201D attribute,"
+                                + " but not both.");
+                    }
+                }
+                if (atts.getIndex("", "href") >= 0 && parent.name == "extent") {
+                    err("A \u201Clink\u201D element in the \u201Cextent\u201D element"
+                            + " must not have an \u201Chref\u201D attribute.");
+                }
+                if (atts.getIndex("", "projection") >= 0) {
+                    if (!relList.contains("alternate")) {
+                        err("A \u201Clink\u201D element with a \u201Cprojection\u201D attribute"
+                                + " must have a \u201Crel\u201D attribute value"
+                                + " of \u201Calternate\u201D");
+                    }
+                }
+                if ((ancestorMask & BODY_MASK) != 0
+                        && (parentName != null && !"extent".equals(parentName))
+                        && (!relList.isEmpty()
+                                && !(relList.contains("next")))
+                        && atts.getIndex("", "itemprop") < 0
+                        && atts.getIndex("", "property") < 0) {
+                    err("A \u201Clink\u201D element must not appear"
+                            + " as a descendant of a \u201Cbody\u201D element"
+                            + " unless the \u201Clink\u201D element has an"
+                            + " \u201Citemprop\u201D attribute or has a"
+                            + " \u201Crel\u201D attribute whose value contains"
+                            + " \u201Cnext\u201D, or"
+                            + " \u201Cstylesheet\u201D.");
+                }
+            }
             int number = specialAncestorNumber(localName);
             if (number > -1) {
                 ancestorMask |= (1 << number);
