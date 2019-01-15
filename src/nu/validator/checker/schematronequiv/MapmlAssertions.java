@@ -114,6 +114,7 @@ public class MapmlAssertions extends Checker {
     }
 
     private static final Map<String, String[]> COORDINATE_SYSTEM_AXES = new HashMap<>();
+    private static final Map<String, String> AXIS_TO_COORDINATE_SYSTEM = new HashMap<>();
 
     static {
         COORDINATE_SYSTEM_AXES.put("tilematrix", 
@@ -128,6 +129,12 @@ public class MapmlAssertions extends Checker {
                 new String[] {"i", "j"});
         COORDINATE_SYSTEM_AXES.put("pcrs", 
                 new String[] {"easting", "northing"});
+        
+        for ( Map.Entry<String, String[]> cs : COORDINATE_SYSTEM_AXES.entrySet()) {
+          for (int i=0;i<cs.getValue().length;i++) {
+            AXIS_TO_COORDINATE_SYSTEM.put(cs.getValue()[i], cs.getKey());
+          }
+        }
     }
 
     
@@ -1049,7 +1056,7 @@ public class MapmlAssertions extends Checker {
                             if (!node.axesFound.get(cs).isEmpty()) {
                                 if (!node.axesFound.get(cs).containsAll(
                                     Arrays.asList(COORDINATE_SYSTEM_AXES.get(cs)))) {
-                                    err("An \u201Cextent\u201D element must have"
+                                    err("An \u201Cextent\u201D element must contain"
                                         + " complementary pairs of \u201Cinput"
                                         + "\u201D elements whose \u201Ctype"
                                         + "\u201D attribute equals \u201Clocation"
@@ -1289,14 +1296,26 @@ public class MapmlAssertions extends Checker {
                     String axisValue = atts.getIndex("", "axis") > -1 ? 
                             atts.getValue(atts.getIndex("", "axis")) : null;
                     if (axisValue != null) {
-                        parent.setFoundAxis(unitsValue, axisValue);
+                        if (atts.getIndex("", "position") > -1) {
+                            // a relative position can be specified in a different
+                            // coordinate system than the default / that of the extent
+                            // need to impute what the coordinate system of the _event_
+                            // will be based on the axis name
+                            parent.setFoundAxis(AXIS_TO_COORDINATE_SYSTEM.get(axisValue), axisValue);
+                            
+                        } else {
+                            // the 
+                            parent.setFoundAxis(unitsValue, axisValue);
+                        }
                         String[] allowedAxes = COORDINATE_SYSTEM_AXES.get(unitsValue);
                         Arrays.sort(allowedAxes);
-                        if (Arrays.binarySearch(allowedAxes,axisValue) < 0) {
+                        if (Arrays.binarySearch(allowedAxes,axisValue) < 0 
+                                && atts.getIndex("", "position") == -1) {
                             err("\u201Caxis\u201D attribute value \u201c" + axisValue
                                 + "\u201d is not allowed when the input"
                                 + " \u201Cunits\u201D value is \u201C" + unitsValue 
-                                + "\u201d. Value must be one of: " 
+                                + "\u201d and attribute \u201Cposition\u201D"
+                                + "is not specified. Value must be one of: " 
                                 + renderTypeList(allowedAxes) + ".");
                         }
                     } else {

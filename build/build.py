@@ -103,7 +103,7 @@ antLauncherJar = os.path.join(antRoot, "ant-launcher.jar")
 
 pageTemplate = os.path.join("site", "PageEmitter.xml")
 formTemplate = os.path.join("site", "FormEmitter.xml")
-presetsFile = os.path.join("resources", "presets.txt")
+presetsFile = os.path.join("resources", "mapml-presets.txt")
 aboutFile = os.path.join("site", "about.html")
 stylesheetFile = os.path.join("site", "style.css")
 scriptFile = os.path.join("site", "script.js")

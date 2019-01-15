@@ -1,4 +1,4 @@
-4	-	MapML	http://s.validator.nu/html5/mapml.rnc http://s.validator.nu/html5/assertions.sch http://c.validator.nu/all/
+-1	-	MapML	http://s.validator.nu/html5/mapml.rnc http://c.validator.nu/mapml.sch
 -1	-	HTML + SVG 1.1 + MathML 3.0	http://s.validator.nu/html5.rnc http://s.validator.nu/html5/assertions.sch http://c.validator.nu/all/
 3	-	HTML + SVG 1.1 + MathML 3.0 + RDFa 1.1	http://s.validator.nu/html5-all.rnc http://s.validator.nu/html5/assertions.sch http://c.validator.nu/all/
 2	-	HTML 4.01 Strict + URL / XHTML 1.0 Strict + URL	http://s.validator.nu/xhtml10/xhtml-strict.rnc http://c.validator.nu/all-html4/
