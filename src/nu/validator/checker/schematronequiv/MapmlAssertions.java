@@ -34,6 +34,8 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.servlet.http.HttpServletRequest;
 import nu.validator.checker.AttributeUtil;
@@ -119,17 +121,19 @@ public class MapmlAssertions extends Checker {
     static {
         COORDINATE_SYSTEM_AXES.put("tilematrix", 
                 new String[] {"row", "column"});
+        COORDINATE_SYSTEM_AXES.put("map", 
+                new String[] {"i", "j"});
         COORDINATE_SYSTEM_AXES.put("tile", 
                 new String[] {"i", "j"});
         COORDINATE_SYSTEM_AXES.put("tcrs", 
                 new String[] {"x", "y"});
         COORDINATE_SYSTEM_AXES.put("gcrs", 
                 new String[] {"latitude", "longitude"});
-        COORDINATE_SYSTEM_AXES.put("map", 
-                new String[] {"i", "j"});
         COORDINATE_SYSTEM_AXES.put("pcrs", 
                 new String[] {"easting", "northing"});
         
+        
+        //TODO figure out how to disambiguate the map / tile axes here.
         for ( Map.Entry<String, String[]> cs : COORDINATE_SYSTEM_AXES.entrySet()) {
           for (int i=0;i<cs.getValue().length;i++) {
             AXIS_TO_COORDINATE_SYSTEM.put(cs.getValue()[i], cs.getKey());
@@ -307,6 +311,9 @@ public class MapmlAssertions extends Checker {
         ATTRIBUTES_WITH_IMPLICIT_STATE_OR_PROPERTY.add("readonly");
         ATTRIBUTES_WITH_IMPLICIT_STATE_OR_PROPERTY.add("required");
     }
+    
+    private static final Pattern VARIABLE_NAME_PATTERN = Pattern.compile("\\{([^/]+?)\\}");
+
 
     private class IdrefLocator {
         private final Locator locator;
@@ -322,7 +329,7 @@ public class MapmlAssertions extends Checker {
         public IdrefLocator(Locator locator, String idref) {
             this.locator = new LocatorImpl(locator);
             this.idref = idref;
-            this.additional = null;
+            this.additional = "";
         }
 
         public IdrefLocator(Locator locator, String idref, String additional) {
@@ -407,6 +414,10 @@ public class MapmlAssertions extends Checker {
         private boolean isCollectingCharacters = false;
         
         private boolean zoomFound = false;
+        
+        private boolean hasAction = false;
+        
+        private boolean queryFound = false;
         
         private final Map<String, Set<String>> axesFound = new HashMap<>();
 
@@ -627,7 +638,22 @@ public class MapmlAssertions extends Checker {
         public void setHeadingFound() {
             this.headingFound = true;
         }
+
+        public boolean hasAction() {
+          return hasAction;
+        }
+
+        public void setHasAction() {
+          this.hasAction = true;
+        }
         
+        public boolean queryFound() {
+          return queryFound;
+        }
+        public void setQueryFound() {
+          this.queryFound = true;
+        }
+
         public Map<String, Set<String>> getAxesFound() {
             return this.axesFound;
         }
@@ -845,12 +871,16 @@ public class MapmlAssertions extends Checker {
 
     private LinkedHashSet<IdrefLocator> listReferences = new LinkedHashSet<>();
 
+    private Set<String> templateVariableNames = new HashSet<>();
+    
+    private LinkedHashSet<IdrefLocator> templateVariableReferences = new LinkedHashSet<>();
+
     private Set<String> listIds = new HashSet<>();
 
     private Set<Locator> selfStyles = new HashSet<>();
 
     private Map<Locator, Map<String, String>> siblingSources = new ConcurrentHashMap<>();
-
+    
     /**
      * @see nu.validator.checker.Checker#endDocument()
      */
@@ -1068,6 +1098,21 @@ public class MapmlAssertions extends Checker {
                         }
                     }
                 }
+                if (node.hasAction()) {
+                } else {
+                  
+                }
+                // URL template variables reference input variables via the 
+                // input@name attribute
+                for (IdrefLocator idrefLocator : templateVariableReferences) {
+                    if (!templateVariableNames.contains(idrefLocator.getIdref())) {
+                        err("\u201Clink\u201D element \u201Ctref\u201D attribute "
+                            + " template variables must each be associated to"
+                            + " a unique \u201Cinput\u201D element "
+                            + "\u201Cname\u201D attribute. "
+                            + idrefLocator.getAdditional(),idrefLocator.getLocator());
+                    }
+                }
             }
         }
         if ((locator = openActiveDescendants.remove(node)) != null) {
@@ -1091,6 +1136,10 @@ public class MapmlAssertions extends Checker {
 
     @Override
     public void reset() {
+        listReferences.clear();
+        listIds.clear();
+        templateVariableNames.clear();
+        templateVariableReferences.clear();
     }
 
     /**
@@ -1124,9 +1173,14 @@ public class MapmlAssertions extends Checker {
             boolean itemscope = false;
             boolean itemtype = false;
             boolean tabindex = false;
+            boolean hasAction = false;
+            boolean hasQuery = false;
+            String method = null;
+            String action = null;
             String lang = null;
             String id = null;
             String list = null;
+            String inputName = null;
             
             // Exclusions
             Integer maskAsObject;
@@ -1237,6 +1291,18 @@ public class MapmlAssertions extends Checker {
                         lang = atts.getValue(i);
                     } else if ("id" == attLocal) {
                         id = atts.getValue(i);
+                    } else if ("name" == attLocal) {
+                        inputName = atts.getValue(i);
+                        
+                    } else if ("action" == attLocal) {
+                        hasAction = true;
+                    } else if ("rel" == attLocal && "link" == localName) {
+                        String[] rels = atts.getValue(i).split("\\s+");
+                        for (int irels=0;irels<rels.length;irels++) {
+                          if (rels[irels].equalsIgnoreCase("query")) {
+                            hasQuery = true;
+                          }
+                        }
                     } else if ("for" == attLocal && "label" == localName) {
                         forAttr = atts.getValue(i);
 //                        ancestorMask |= LABEL_FOR_MASK;
@@ -1265,7 +1331,7 @@ public class MapmlAssertions extends Checker {
                         }
                         if ("zoom".equals(inputTypeVal)) {
                             parent.setZoomFound();
-                        } 
+                        }
                     } else if (ATTRIBUTES_WITH_IMPLICIT_STATE_OR_PROPERTY.contains(
                             attLocal)) {
                         String stateOrProperty = "aria-" + attLocal;
@@ -1277,6 +1343,10 @@ public class MapmlAssertions extends Checker {
                                     + " have attribute \u201C" + attLocal
                                     + "\u201D.");
                         }
+                    } else if ("method" == attLocal) {
+                        method = atts.getValue(i);
+                    } else if ("action" == attLocal) {
+                        action = atts.getValue(i);
                     }
                 }
 
@@ -1301,6 +1371,11 @@ public class MapmlAssertions extends Checker {
                             // coordinate system than the default / that of the extent
                             // need to impute what the coordinate system of the _event_
                             // will be based on the axis name
+                            // TODO there is a problem in that axis names don't
+                            // map to a unique coordinate system name, so when
+                            // the axis name is i / j, the coordinate system name
+                            // can be either map or tile and so we should figure
+                            // out how to impute which it should be here
                             parent.setFoundAxis(AXIS_TO_COORDINATE_SYSTEM.get(axisValue), axisValue);
                             
                         } else {
@@ -1331,7 +1406,48 @@ public class MapmlAssertions extends Checker {
                                 + " or not exist at all.");
                         }
                     }
-                }              
+                } else if ("hidden".equals(inputTypeVal)) {
+                    if (atts.getIndex("", "shard") > -1) {
+                        if (list == null) {
+                            err("An \u201Cinput\u201D element with a "
+                            + "\u201Cshard\u201D attribute must have "
+                            + "\u201Clist\u201D attribute.");
+                        } else {
+                            listReferences.add(new IdrefLocator(
+                                new LocatorImpl(getDocumentLocator()), list));
+                        }
+                        if (atts.getIndex("", "value") > -1) {
+                            err("An \u201Cinput\u201D element with a"
+                            + " \u201Cshard\u201D attribute must not have a"
+                            + " \u201Cvalue\u201D attribute.");
+                        }
+                    } else {
+                      // regular hidden variable
+                    }
+                  
+                }
+                if (inputName != null && action == null) {
+                    templateVariableNames.add(inputName);
+                }
+            }
+            if ("extent" == localName) {
+              if (action == null) {
+                  if (method != null) {
+                      err("An \u201Cextent\u201D element with a \u201Cmethod\u201D "
+                        + " attribute must have an \u201Caction\u201D attribute.");
+                  }
+                  // content model should include at least one link[@tref][rel=tile|image|features]
+                  // and at most one link[@tref][rel=query]
+                  
+                  // for each input with @name, ensure that there is at least one associated
+                  // variable reference in at least one link@tref value.
+              } else {
+                  // the content model should be no link[@tref][rel=tile|image|features] children
+                  // and at most one link[@tref][rel=query]
+              }
+            }
+            if ("datalist" == localName) {
+                listIds.addAll(ids);
             }
             if ("link" == localName) {
                 boolean hasRel = false;
@@ -1346,6 +1462,12 @@ public class MapmlAssertions extends Checker {
                     relList.contains("self") && relList.contains("style")) {
                     selfStyles.add(new LocatorImpl(getDocumentLocator()));
                 }
+                if (hasRel && relList.contains("query") && parent.queryFound()) {
+                    warn("The \u201Cextent\u201D element should contain at most"
+                            + " one \u201Clink\u201D element with a \u201Crel\u201D"
+                            + " attribute containing the \u201Cquery\u201D link"
+                            + " relation.");
+                }
                 if (atts.getIndex("", "tref") >= 0) {
                     if (parentName != null && !"extent".equals(parentName)) {
                         err("The \u201Ctref\u201D attribute must only occur"
@@ -1356,6 +1478,14 @@ public class MapmlAssertions extends Checker {
                         err("A \u201Clink\u201D element may have a \u201Ctref\u201D attribute or"
                                 + " an \u201Chref\u201D attribute,"
                                 + " but not both.");
+                    }
+                    // get the set of template variable names from the URL template
+                    String tref = atts.getValue(atts.getIndex("", "tref"));
+                    Matcher m = VARIABLE_NAME_PATTERN.matcher(tref);
+                    while (m.find()) {
+                      String varName = tref.substring(m.start(1), m.end(1));
+                      templateVariableReferences.add(new IdrefLocator(
+                        new LocatorImpl(getDocumentLocator()), varName, "{"+varName+"} has no associated \u201Cinput\u201D element."));
                     }
                 }
                 if (atts.getIndex("", "href") >= 0 && parent.name == "extent") {
@@ -1391,6 +1521,12 @@ public class MapmlAssertions extends Checker {
             MapmlAssertions.StackNode child = new MapmlAssertions.StackNode(ancestorMask, localName, role,
                     activeDescendant, forAttr);
             push(child);
+            if ("extent".equals(localName) && hasAction) {
+                child.setHasAction();
+            }
+            if ("link".equals(localName) && hasQuery) {
+                parent.setQueryFound();
+            }
         }
         stack[currentPtr].setLocator(new LocatorImpl(getDocumentLocator()));
     }

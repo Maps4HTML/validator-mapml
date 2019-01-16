@@ -2,18 +2,6 @@
 <sch:schema xmlns:sch="http://purl.oclc.org/dsdl/schematron" queryBinding="xslt2"
     xmlns:sqf="http://www.schematron-quickfix.com/validator/process" xmlns:xs="http://www.w3.org/2001/XMLSchema-datatypes" >
     <sch:pattern >
-        <sch:rule context="input[@type='hidden'][@shard]">
-            <sch:assert test="exists(./@list)">A shard-type input must have a @list attribute</sch:assert>
-            <sch:let name="listid" value="./@list"></sch:let>
-            <sch:assert test="exists(//datalist[@id eq $listid])">A datalist must be associated to a shard-type input</sch:assert>
-            <sch:report test="exists(./@value)">A shard-type input must not have a @value</sch:report>
-        </sch:rule>
-        <sch:rule context="input[@shard]">
-            <sch:assert test=".[@type eq 'hidden']">A shard-type input must have @type="hidden"</sch:assert>
-        </sch:rule>
-        <sch:rule context="extent">
-            <sch:report test="(exists(@method) and not(exists(@action)))">An extent with a method attribute must have an action attribute</sch:report>
-        </sch:rule>
     </sch:pattern>
     <sch:pattern>
         <sch:rule context="extent[@action]">
