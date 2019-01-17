@@ -419,6 +419,8 @@ public class MapmlAssertions extends Checker {
         
         private boolean queryFound = false;
         
+        private boolean templatedLinkFound = false;
+        
         private final Map<String, Set<String>> axesFound = new HashMap<>();
 
         /**
@@ -652,6 +654,14 @@ public class MapmlAssertions extends Checker {
         }
         public void setQueryFound() {
           this.queryFound = true;
+        }
+        
+        public boolean templatedLinkFound() {
+            return templatedLinkFound;
+        }
+        
+        public void setTemplatedLinkFound() {
+            this.templatedLinkFound = true;
         }
 
         public Map<String, Set<String>> getAxesFound() {
@@ -1098,7 +1108,13 @@ public class MapmlAssertions extends Checker {
                         }
                     }
                 }
-                if (node.hasAction()) {
+                if (node.hasAction() && node.templatedLinkFound()) {
+                    warn("An \u201Cextent\u201D element "
+                      + " that has an \u201Caction\u201D attribute should "
+                      + " not have child \u201Clink\u201D element(s) with "
+                      + " \u201Crel\u201D attribute values including "
+                      + " \u201Ctile\u201D, \u201Cimage\u201D or"
+                      + " \u201Cfeatures\u201D", node.locator());
                 } else {
                   
                 }
@@ -1113,6 +1129,8 @@ public class MapmlAssertions extends Checker {
                             + idrefLocator.getAdditional(),idrefLocator.getLocator());
                     }
                 }
+                templateVariableReferences.clear();
+                templateVariableNames.clear();
             }
         }
         if ((locator = openActiveDescendants.remove(node)) != null) {
@@ -1175,6 +1193,8 @@ public class MapmlAssertions extends Checker {
             boolean tabindex = false;
             boolean hasAction = false;
             boolean hasQuery = false;
+            boolean templatedResource = false;
+            String tref = null;
             String method = null;
             String action = null;
             String lang = null;
@@ -1270,6 +1290,8 @@ public class MapmlAssertions extends Checker {
                         tabindex = true;
                     } else if ("href" == attLocal) {
                         href = true;
+                    } else if ("tref" == attLocal) {    
+                        tref = atts.getValue(i);
                     } else if ("controls" == attLocal) {
                         controls = true;
                     } else if ("type" == attLocal) {
@@ -1293,7 +1315,6 @@ public class MapmlAssertions extends Checker {
                         id = atts.getValue(i);
                     } else if ("name" == attLocal) {
                         inputName = atts.getValue(i);
-                        
                     } else if ("action" == attLocal) {
                         hasAction = true;
                     } else if ("rel" == attLocal && "link" == localName) {
@@ -1426,16 +1447,14 @@ public class MapmlAssertions extends Checker {
                     }
                   
                 }
-                if (inputName != null && action == null) {
+            }
+            if ("select".equals(localName) || "input".equals(localName)) {
+                if (inputName != null) {
                     templateVariableNames.add(inputName);
                 }
             }
             if ("extent" == localName) {
               if (action == null) {
-                  if (method != null) {
-                      err("An \u201Cextent\u201D element with a \u201Cmethod\u201D "
-                        + " attribute must have an \u201Caction\u201D attribute.");
-                  }
                   // content model should include at least one link[@tref][rel=tile|image|features]
                   // and at most one link[@tref][rel=query]
                   
@@ -1468,7 +1487,13 @@ public class MapmlAssertions extends Checker {
                             + " attribute containing the \u201Cquery\u201D link"
                             + " relation.");
                 }
-                if (atts.getIndex("", "tref") >= 0) {
+                if (hasRel && tref != null && !relList.contains("query") &&
+                        (relList.contains("tile") || 
+                         relList.contains("image") || 
+                        relList.contains("features")) ) {
+                        templatedResource = true;
+                }
+                if (tref != null) {
                     if (parentName != null && !"extent".equals(parentName)) {
                         err("The \u201Ctref\u201D attribute must only occur"
                                 + " on a \u201Clink\u201D element"
@@ -1479,8 +1504,6 @@ public class MapmlAssertions extends Checker {
                                 + " an \u201Chref\u201D attribute,"
                                 + " but not both.");
                     }
-                    // get the set of template variable names from the URL template
-                    String tref = atts.getValue(atts.getIndex("", "tref"));
                     Matcher m = VARIABLE_NAME_PATTERN.matcher(tref);
                     while (m.find()) {
                       String varName = tref.substring(m.start(1), m.end(1));
@@ -1524,8 +1547,12 @@ public class MapmlAssertions extends Checker {
             if ("extent".equals(localName) && hasAction) {
                 child.setHasAction();
             }
-            if ("link".equals(localName) && hasQuery) {
-                parent.setQueryFound();
+            if ("link".equals(localName)) {
+                if (hasQuery && "extent".equals(parent.name)) {
+                    parent.setQueryFound();
+                } else if (templatedResource && "extent".equals(parent.name)) {
+                    parent.setTemplatedLinkFound();
+                } 
             }
         }
         stack[currentPtr].setLocator(new LocatorImpl(getDocumentLocator()));

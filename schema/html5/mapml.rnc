@@ -29,6 +29,7 @@ headContent =
         attribute content {text}?,
         attribute http-equiv {text}?
     }* &
+    element style { text }? &
     element title { text }? &
     links
 
