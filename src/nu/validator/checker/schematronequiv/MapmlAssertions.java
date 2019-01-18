@@ -38,7 +38,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import javax.servlet.http.HttpServletRequest;
-import nu.validator.checker.AttributeUtil;
 
 import nu.validator.checker.Checker;
 import nu.validator.checker.LocatorImpl;
@@ -914,18 +913,11 @@ public class MapmlAssertions extends Checker {
             }
         }
 
-        // references to IDs from form attributes
-        for (IdrefLocator idrefLocator : formElementReferences) {
-            if (!formElementIds.contains(idrefLocator.getIdref())) {
-                err("The \u201Cform\u201D attribute must refer to a form element.",
-                        idrefLocator.getLocator());
-            }
-        }
-
         // input list
         for (IdrefLocator idrefLocator : listReferences) {
             if (!listIds.contains(idrefLocator.getIdref())) {
-                err("The \u201Clist\u201D attribute of the \u201Cinput\u201D element must refer to a \u201Cdatalist\u201D element.",
+                err("The \u201Clist\u201D attribute of the \u201Cinput\u201D "
+                    + "element must refer to a \u201Cdatalist\u201D element.",
                         idrefLocator.getLocator());
             }
         }
@@ -1411,7 +1403,7 @@ public class MapmlAssertions extends Checker {
                                 + "\u201d is not allowed when the input"
                                 + " \u201Cunits\u201D value is \u201C" + unitsValue 
                                 + "\u201d and attribute \u201Cposition\u201D"
-                                + "is not specified. Value must be one of: " 
+                                + " is not specified. Value must be one of: " 
                                 + renderTypeList(allowedAxes) + ".");
                         }
                     } else {
@@ -1450,23 +1442,26 @@ public class MapmlAssertions extends Checker {
             }
             if ("select".equals(localName) || "input".equals(localName)) {
                 if (inputName != null) {
-                    templateVariableNames.add(inputName);
+                    if (!templateVariableNames.add(inputName)) {
+                        warn("Duplicate input control name found: "
+                                + inputName);
+                    }
                 }
-            }
-            if ("extent" == localName) {
-              if (action == null) {
-                  // content model should include at least one link[@tref][rel=tile|image|features]
-                  // and at most one link[@tref][rel=query]
-                  
-                  // for each input with @name, ensure that there is at least one associated
-                  // variable reference in at least one link@tref value.
-              } else {
-                  // the content model should be no link[@tref][rel=tile|image|features] children
-                  // and at most one link[@tref][rel=query]
-              }
             }
             if ("datalist" == localName) {
                 listIds.addAll(ids);
+            }
+            // label for
+            if ("label" == localName) {
+                String forVal = atts.getValue("", "for");
+                if (forVal != null) {
+                    formControlReferences.add(new IdrefLocator(
+                            new LocatorImpl(getDocumentLocator()), forVal));
+                }
+            }
+            if (("input" == localName && !hidden) //
+                    || "select" == localName) {
+                formControlIds.addAll(ids);
             }
             if ("link" == localName) {
                 boolean hasRel = false;

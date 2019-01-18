@@ -2,23 +2,9 @@
 <sch:schema xmlns:sch="http://purl.oclc.org/dsdl/schematron" queryBinding="xslt2"
     xmlns:sqf="http://www.schematron-quickfix.com/validator/process" xmlns:xs="http://www.w3.org/2001/XMLSchema-datatypes" >
     <sch:pattern>
-        <sch:rule context="input[@name = preceding-sibling::input/@name]">
-            <sch:assert test="false()">Duplicate input/@name detected</sch:assert>
-        </sch:rule>
         <sch:rule context="input[@type eq 'location' or @type eq 'zoom'][@min][@max][xs:decimal(@min) &gt; xs:decimal(@max)]">
             <sch:assert test="false()">@min &gt; @max detected</sch:assert>
         </sch:rule>
-        <sch:rule context="link[@projection]">
-            <!-- this rule doesn't work. don't know why. <sch:assert test="./@rel eq 'alternate'">For alternate projection links, @rel must equal 'alternate'</sch:assert>-->
-            <sch:assert test="local-name(parent::node()) eq 'head'">Alternate projection links can only be in the head element</sch:assert>
-        </sch:rule>
-        </sch:rule>
-    </sch:pattern>
-    <sch:pattern>
-        <sch:rule context="label">
-            <sch:assert test="exists(./@for)">A label must have a @for attribute</sch:assert>
-            <sch:let name="forid" value="./@for"></sch:let>
-            <sch:assert test="exists(//*[@id eq $forid])">A label must be associated to another element by label@for == element@id</sch:assert>
         </sch:rule>
     </sch:pattern>
     <sch:pattern>

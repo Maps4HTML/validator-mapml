@@ -15,7 +15,7 @@ link = element link {
         attribute rel {  "stylesheet" | "license" | "alternate" | "style" | "self" | "self style" | "style self" | "legend" | "next" | "zoomin" | "zoomout" | "image" | "tile" | "query" | "features" },
         attribute projection { "OSMTILE" | "CBMTILE" | "APSTILE" | "WGS84" }?,
         attribute title { text }?,
-        attribute type { "text/css" | "text/mapml" | "image/png" | "image/jpeg" }?,
+        attribute type { "text/css" | "text/mapml" | "image/png" | "image/jpeg" | "text/html" }?,
         attribute hreflang { text }?
     }
 links = link*
