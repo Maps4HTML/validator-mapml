@@ -55,7 +55,7 @@ inputs = (element input {
   # https://developer.mozilla.org/en-US/docs/Web/CSS/object-position 
   attribute position { "top-left" | "top-right" | "bottom-left" | "bottom-right" | "center-left" | "center-right" | "top-center" | "bottom-center" | "center" }?,
   attribute axis { "latitude" | "longitude" | "easting" | "northing" | "x" | "y" | "row" | "column" | "i" | "j" }?,
-  attribute units {"tilematrix" | "pcrs" | "tcrs" | "map" | "gcrs" }?,
+  attribute units {"tilematrix" | "pcrs" | "tcrs" | "map" | "gcrs" | "tile" }?,
   attribute required { xsd:boolean }?,
   attribute min { xsd:decimal }?,
   attribute max { xsd:decimal }?,
