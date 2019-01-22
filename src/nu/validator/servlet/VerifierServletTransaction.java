@@ -265,13 +265,9 @@ class VerifierServletTransaction implements DocumentModeHandler, SchemaResolver 
             "http://c.validator.nu/text-content/",
             "http://c.validator.nu/unchecked/",
             "http://c.validator.nu/usemap/", "http://c.validator.nu/obsolete/",
-            "http://c.validator.nu/extent/",
             "http://c.validator.nu/xml-pi/", "http://c.validator.nu/unsupported/",
             "http://c.validator.nu/microdata/",
             "http://c.validator.nu/langdetect/" };
-
-    private static final String[] ALL_MAPML_CHECKERS = {
-            "http://c.validator.nu/mapml.sch"};
 
     private static final String[] ALL_CHECKERS_HTML4 = {
             "http://c.validator.nu/table/", "http://c.validator.nu/nfc/",
@@ -1036,6 +1032,22 @@ class VerifierServletTransaction implements DocumentModeHandler, SchemaResolver 
 
     }
 
+    private boolean isMapmlUnsafePreset() {
+        if ("".equals(schemaUrls)) {
+            return false;
+        }
+        boolean preset = false;
+        for (String presetUrl : presetUrls) {
+            if (presetUrl.equals(schemaUrls)) {
+                preset = true;
+                break;
+            }
+        }
+        if (!preset) {
+            return false;
+        }
+        return !(schemaUrls.startsWith("http://s.validator.nu/html5/mapml.rnc"));
+    }
     /**
      * @throws SAXException
      */
@@ -1544,6 +1556,8 @@ class VerifierServletTransaction implements DocumentModeHandler, SchemaResolver 
     protected void loadDocAndSetupParser() throws SAXException, IOException,
             IncorrectSchemaException, SAXNotRecognizedException,
             SAXNotSupportedException {
+        String type;
+
         switch (parser) {
             case HTML:
                 if (isHtmlUnsafePreset()) {
@@ -1558,8 +1572,11 @@ class VerifierServletTransaction implements DocumentModeHandler, SchemaResolver 
                 setAllowXhtml(false);
                 loadDocumentInput();
                 newHtmlParser();
-                int schemaId;
-                schemaId = HTML5_SCHEMA;
+                type = documentInput.getType();
+                int schemaId = 0;
+                if (!"text/mapml".equals(type)) {
+                    schemaId = HTML5_SCHEMA;
+                }
                 htmlParser.setDocumentModeHandler(this);
                 reader = htmlParser;
                 if (validator == null) {
@@ -1584,12 +1601,25 @@ class VerifierServletTransaction implements DocumentModeHandler, SchemaResolver 
                 setAcceptAllKnownXmlTypes(true);
                 setAllowXhtml(true);
                 loadDocumentInput();
-                String type = documentInput.getType();
+                type = documentInput.getType();
                 if ("text/css".equals(type)) {
                     break;
                 } else if ("text/html".equals(type) || "text/html-sandboxed".equals(type)) {
                     if (isHtmlUnsafePreset()) {
                         String message = "The Content-Type was \u201C" + type + "\u201D, but the chosen preset schema is not appropriate for HTML.";
+                        SAXException se = new SAXException(message);
+                        errorHandler.schemaError(se);
+                        throw se;
+                    }
+                    newHtmlParser();
+                    htmlParser.setDocumentModeHandler(this);
+                    reader = htmlParser;
+                    if (validator != null) {
+                        reader.setContentHandler(validator.getContentHandler());
+                    }
+                } else if ("text/mapml".equals(type)) {
+                    if (isMapmlUnsafePreset()) {
+                        String message = "The Content-Type was \u201C" + type + "\u201D, but the chosen preset schema is not appropriate for MapML.";
                         SAXException se = new SAXException(message);
                         errorHandler.schemaError(se);
                         throw se;

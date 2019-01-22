@@ -117,6 +117,7 @@ public class ContentTypeParser {
                 || "application/octet-stream".equals(type);
         if (!typeOk && laxContentType) {
             boolean laxOk = "text/plain".equals(type)
+                    || "text/mapml".equals(type)
                     || "text/html".equals(type) || "text/xsl".equals(type);
             if (laxOk && errorHandler != null) {
                 errorHandler.warning(new SAXParseException(
@@ -205,7 +206,8 @@ public class ContentTypeParser {
             }
             if (!wasRnc && !wasCss) {
                 if (isAllowHtml()) {
-                    if ("text/html".equals(type) || "text/html-sandboxed".equals(type)) {
+                    if ("text/html".equals(type) || "text/html-sandboxed".equals(type) 
+                            || "text/mapml".equals(type)) {
                         is.setType(type);
                         wasHtml = true;
                     } else if (isOnlyHtmlAllowed()) {
@@ -220,7 +222,7 @@ public class ContentTypeParser {
                             }
                         } else if ("application/octet-stream".equals(type)) {
                             is.setType(type);
-                            wasHtml = true;                            
+                            wasHtml = true;
                         } else {
                             String msg = "Non-HTML Content-Type: \u201C" + type
                                     + "\u201D.";
