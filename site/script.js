@@ -89,8 +89,11 @@ function initFieldHolders() {
 	urlInput.setAttribute('aria-labelledby', 'docselect')
 	
 	textareaHidden = createHtmlElement('input')
+ textareaTypeHidden = createHtmlElement('input')
 	textarea = createHtmlElement('textarea')
-	if (textarea && textareaHidden) {
+	if (textarea && textareaHidden && textareaTypeHidden) {
+  textareaTypeHidden.type = 'hidden'
+  textareaTypeHidden.name = 'contenttype'
 		textareaHidden.type = 'hidden'
 		textareaHidden.name = 'content'
 		textarea.cols = 72
@@ -289,6 +292,11 @@ function formSubmission() {
 	maybeMoveDocumentRowDown()
 	if (textareaHidden && textarea) {
 	  textareaHidden.value = textarea.value
+   if (textarea.value.includes('<mapml')) {
+     textareaTypeHidden.value = 'text/mapml'
+   } else {
+     textareaTypeHidden.value = 'text/html'
+   }
 	}
 	return true
 }
@@ -480,9 +488,10 @@ function installTextarea() {
 			schemaChanged()
 		}
 	}
-	if (textareaHidden) {
+	if (textareaHidden && textareaTypeHidden) {
 	  var submit = document.getElementById("submit")
 	  if (submit) {
+     submit.parentNode.appendChild(textareaTypeHidden)
 	    submit.parentNode.appendChild(textareaHidden)
 	  }
 	}

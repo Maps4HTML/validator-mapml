@@ -67,6 +67,7 @@ public final class MultipartFormDataFilter implements Filter {
     static {
         EXTENSION_TO_TYPE.put("html", "text/html");
         EXTENSION_TO_TYPE.put("htm", "text/html");
+        EXTENSION_TO_TYPE.put("mapml", "text/mapml");
         EXTENSION_TO_TYPE.put("xhtml", "application/xhtml+xml");
         EXTENSION_TO_TYPE.put("xht", "application/xhtml+xml");
         EXTENSION_TO_TYPE.put("css", "text/css");
@@ -143,18 +144,20 @@ public final class MultipartFormDataFilter implements Filter {
                                 || "fragment".equals(fieldName)) {
                             utf8 = true;
                             String[] parser = params.get("parser");
-                            if (parser != null && parser[0].startsWith("xml")) {
+                            if (contentType == null && parser != null && parser[0].startsWith("xml")) {
                                 contentType = "application/xml";
                             } else {
                                 contentType = "text/html";
                             }
                             String[] css = params.get("css");
-                            if (css != null && "yes".equals(css[0])) {
+                            if (contentType == null && css != null && "yes".equals(css[0])) {
                                 contentType = "text/css";
                             }
                             request.setAttribute("nu.validator.servlet.MultipartFormDataFilter.type", "textarea");
                             fileStream = fileItemStream.openStream();
                             break;
+                        } else if ("contenttype".equals(fieldName)) {
+                            contentType = utf8ByteStreamToString(fileItemStream.openStream());
                         } else {
                             putParam(
                                     params,
