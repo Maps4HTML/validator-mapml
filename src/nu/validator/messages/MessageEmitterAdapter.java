@@ -392,9 +392,18 @@ public class MessageEmitterAdapter implements ErrorHandler {
             ".*leader(.+)is not a \u201Ccontent\u201D value.*", //
     };
 
-    protected static final Pattern DEFAULT_FILTER_PATTERN = Pattern.compile(
-            String.join("|", DEFAULT_FILTER_STRINGS));
-
+    static private final StringBuilder sb = new StringBuilder();
+    static {
+        
+        for (int i=0;i<DEFAULT_FILTER_STRINGS.length;i++) {
+            sb.append(DEFAULT_FILTER_STRINGS[i]);
+            if( i+1 < DEFAULT_FILTER_STRINGS.length) {
+              sb.append("|");
+            }
+        }
+    }
+    protected static final Pattern DEFAULT_FILTER_PATTERN = 
+            Pattern.compile(sb.toString());
     private final AttributesImpl attributesImpl = new AttributesImpl();
 
     private final char[] oneChar = { '\u0000' };
