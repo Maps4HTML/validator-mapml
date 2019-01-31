@@ -1,0 +1,35 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>nu.validator</groupId>
+  <artifactId>mapml-vnu</artifactId>
+  <packaging>jar</packaging>
+  <version>0.1-SNAPSHOT</version>
+  <name>MapML Validator nu 0.1-SNAPSHOT</name>
+  <url>https://github.com/prushforth/validator-mapml</url>
+  <description>The Validator.nu MapML parser and validator is an experimental fork of https://about.validator.nu/ and is a work in progress.</description>
+  <developers>
+    <developer>
+      <id>prushforth</id>
+      <name>Peter Rushforth</name>
+      <email>peter.rushforth@canada.ca</email>
+      <url>http://maps4html.org/</url>
+    </developer>
+  </developers>
+  <licenses>
+    <license>
+      <name>The MIT License</name>
+      <url>http://www.opensource.org/licenses/mit-license.php</url>
+      <distribution>repo</distribution>
+    </license>
+    <license>
+      <name>The (New) BSD License</name>
+      <url>http://www.opensource.org/licenses/bsd-license.php</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+  <scm>
+    <connection>scm:git:https://github.com/prushforth/validator-mapml</connection>
+    <url>https://github.com/prushforth/validator-mapml</url>
+  </scm>
+</project>
