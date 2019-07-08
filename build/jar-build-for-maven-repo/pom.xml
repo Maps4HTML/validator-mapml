@@ -29,7 +29,7 @@
     </license>
   </licenses>
   <scm>
-    <connection>scm:git:https://github.com/prushforth/validator-mapml</connection>
-    <url>https://github.com/prushforth/validator-mapml</url>
+    <connection>scm:git:https://github.com/Maps4HTML/validator-mapml</connection>
+    <url>https://github.com/Maps4HTML/validator-mapml</url>
   </scm>
 </project>

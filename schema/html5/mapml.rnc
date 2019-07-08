@@ -1,15 +1,11 @@
 default namespace = "http://www.w3.org/1999/xhtml"
 datatypes xsd = "http://www.w3.org/2001/XMLSchema-datatypes" 
 start = mapml 
-mapml = element mapml { 
-    attribute lang {text}?,
-    head?,
-    body 
-}
+mapml = element mapml { head?, attribute lang {text}?, body }
 head = element head { headContent }
 link = element link { 
         attribute href { xsd:anyURI }?,
-        # can have a tref or an href, but not both
+        # can have a tref (when in extent) or an href (but not both)
         attribute tref { text }?,
         # @rel=alternate + @projection=tcrs-name is proposed as a way of negotiating the tcrs of the service: https://github.com/Maps4HTML/MapML/issues/11
         attribute rel {  "stylesheet" | "license" | "alternate" | "style" | "self" | "self style" | "style self" | "legend" | "next" | "zoomin" | "zoomout" | "image" | "tile" | "query" | "features" },
@@ -89,7 +85,7 @@ tile = element tile {
     attribute row { xsd:integer },
     ImageResourceMetadataAttributes
 }
-bbox = element bbox { twoCoordinatePairs }
+bbox = element bbox { twoPositions }
 image =    element image { ImageModel }
 geometry = element geometry { GeometryContent }
 properties = element properties { PropertyContent }
@@ -110,17 +106,17 @@ imageLocation = attribute x { xsd:double }, attribute y { xsd:double }
 imageSize = attribute width { xsd:integer },attribute height { xsd:integer }
 
 GeometryContent = point | linestring | polygon | multipoint | multilinestring | multipolygon | geometrycollection   
-point = element point { coordinatePair }
-linestring = element linestring { twoOrMoreCoordinatePairs }
-polygon = element polygon { threeOrMoreCoordinatePairs+ }
-multipoint = element multipoint { coordinatePair+ }
-multilinestring = element multilinestring { twoOrMoreCoordinatePairs+ }
+point = element point { coordinatesWithOnePosition }
+linestring = element linestring { coordinatesWithTwoOrMorePositions }
+polygon = element polygon { coordinatesWithThreeOrMorePositions+ }
+multipoint = element multipoint { coordinatesWithTwoOrMorePositions }
+multilinestring = element multilinestring { coordinatesWithTwoOrMorePositions+ }
 multipolygon = element multipolygon { polygon+ }
 geometrycollection = element geometrycollection {
     (point* & linestring* & polygon* & multipoint* & multilinestring* & multipolygon*)
 }
-coordinatePair = element coordinates  { list  { (xsd:double, xsd:double) } }
-twoOrMoreCoordinatePairs = element coordinates { list { (xsd:double, xsd:double)+ } }
-threeOrMoreCoordinatePairs = element coordinates { list { (xsd:double, xsd:double), (xsd:double, xsd:double), (xsd:double, xsd:double)+ } }
+coordinatesWithOnePosition = element coordinates  { list  { (xsd:double, xsd:double) } }
+coordinatesWithTwoOrMorePositions = element coordinates { list { (xsd:double, xsd:double), (xsd:double, xsd:double)+ } }
+coordinatesWithThreeOrMorePositions = element coordinates { list { (xsd:double, xsd:double), (xsd:double, xsd:double), (xsd:double, xsd:double)+ } }
 # for bbox content, omits coordinates element
-twoCoordinatePairs =  list  { (xsd:double, xsd:double, xsd:double, xsd:double) } 
+twoPositions =  list  { (xsd:double, xsd:double, xsd:double, xsd:double) } 
